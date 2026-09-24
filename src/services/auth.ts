@@ -46,6 +46,12 @@ export async function logout(): Promise<void> {
   await signOut(firebase().auth);
 }
 
+// How long the loading screen may wait for Firebase to report the saved login. With a saved
+// session Firebase first asks the server whether it is still valid; on a slow or flaky network
+// that can take very long, so after this we show the login screen and let the real answer
+// (if it is a valid session) take over once it arrives.
+export const SESSION_CHECK_TIMEOUT_MS = 4000;
+
 // Call once at startup. Restores a saved login and keeps the session store in sync.
 export function watchSession(): () => void {
   const { setUser } = useSessionStore.getState();
@@ -53,5 +59,15 @@ export function watchSession(): () => void {
     setUser(null);
     return () => {};
   }
-  return onAuthStateChanged(firebase().auth, (u) => setUser(u ? toUser(u) : null));
+  const timer = setTimeout(() => {
+    if (useSessionStore.getState().initializing) setUser(null);
+  }, SESSION_CHECK_TIMEOUT_MS);
+  const unsubscribe = onAuthStateChanged(firebase().auth, (u) => {
+    clearTimeout(timer);
+    setUser(u ? toUser(u) : null);
+  });
+  return () => {
+    clearTimeout(timer);
+    unsubscribe();
+  };
 }
