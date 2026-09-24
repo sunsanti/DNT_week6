@@ -1,0 +1,3 @@
+// Seat ids are zero-based positions; people see them as 1, 2, 3...
+export const formatSeats = (seatIds: number[]): string =>
+  `Seat${seatIds.length > 1 ? 's' : ''} ${seatIds.map((id) => id + 1).join(', ')}`;

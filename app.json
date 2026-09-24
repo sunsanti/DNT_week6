@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Study Room Booking",
+    "slug": "room-booking-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dnt.roombooking"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2563EB",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dnt.roombooking"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Study Room Booking",
+      "shortName": "Study Rooms",
+      "themeColor": "#2563EB",
+      "backgroundColor": "#F8FAFC"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "description": "Book campus study rooms and labs: pick a time slot, choose your seats."
+  }
+}
