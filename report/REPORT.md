@@ -1,111 +1,167 @@
-# VKU – Cross-platform Development
-## MINI-PROJECT SHORT TECHNICAL REPORT
+# VKU – Phát triển ứng dụng đa nền tảng
+## BÁO CÁO KỸ THUẬT NGẮN – MINI-PROJECT
 
-**Project:** Mini-Project 2 – Real-time Study Room Booking App
-**Date:** 24/09/2026
+**Đề tài:** Mini-Project 2 – Real-time Study Room Booking App (ứng dụng đặt phòng học / phòng lab)
+**Ngày:** 24/09/2026
 
 ---
 
-## 1. Team information
+## 1. Thông tin nhóm
 
-| Field | Value |
+| Mục | Nội dung |
 |---|---|
-| Team name | `TODO: fill in` |
-| Class | `TODO: fill in` |
+| Tên nhóm | `TODO: điền` |
+| Lớp | `TODO: điền` |
 
-| # | Student name | Student ID | Role | Contribution (%) |
+| # | Họ tên | MSSV | Vai trò | Đóng góp (%) |
 |---|---|---|---|---|
 | 1 | `TODO` | `TODO` | `TODO` | `TODO` |
 | 2 | `TODO` | `TODO` | `TODO` | `TODO` |
 
-> Names, IDs, roles and contribution percentages were not provided, so they are left blank on purpose.
+> Họ tên, MSSV, vai trò, % đóng góp chưa có thông tin nên để trống có chủ đích.
 
 ---
 
-## 2. Product links
+## 2. Liên kết sản phẩm
 
-| Item | Link |
+| Mục | Liên kết |
 |---|---|
-| Source code (GitHub) | https://github.com/sunsanti/DNT_week6 |
-| Live demo (GitHub Pages, installable PWA) | https://sunsanti.github.io/DNT_week6/ |
-| Android APK (GitHub Release) | https://github.com/sunsanti/DNT_week6/releases/latest (`room-booking-app.apk`, ~42 MB, debug-signed) |
-| Demo video | N/A |
+| Mã nguồn (GitHub) | https://github.com/sunsanti/DNT_week6 |
+| Live demo (GitHub Pages, cài được như PWA) | https://sunsanti.github.io/DNT_week6/ |
+| File APK Android (GitHub Release) | https://github.com/sunsanti/DNT_week6/releases/latest (`room-booking-app.apk`, ~42 MB, ký debug) |
+| Video demo | Không có |
 
-**Stack:** React Native + Expo SDK 57 (managed), TypeScript strict, React Navigation 7 (Bottom Tabs + Native Stack), Zustand (client state), TanStack Query (server state), Firebase Auth + Firestore (accounts), expo-notifications (reminders).
+**Công nghệ:** React Native + Expo SDK 57 (managed), TypeScript strict, React Navigation 7 (Bottom Tabs + Native Stack), Zustand (state phía client), TanStack Query (state phía server), Firebase Auth + Firestore (tài khoản), expo-notifications (nhắc lịch).
 
 ---
 
-## 3. Feature checklist
+## 3. Cấu trúc thư mục
 
-| Requirement | Status | Notes |
+```
+room-booking-app/
+├── App.tsx                     # Điểm vào: nạp font, theo dõi phiên đăng nhập, Toast
+├── app.json / app.config.js    # Cấu hình Expo (tên app, package, baseUrl cho GitHub Pages)
+├── firebase.json, firestore.rules   # Cấu hình Firebase + luật bảo mật (mỗi user chỉ đọc/ghi doc của mình)
+├── .env.local                  # Khóa Firebase web (KHÔNG commit, đã .gitignore)
+├── public/                     # File cho bản web/PWA: manifest, service worker, icon
+├── assets/                     # Icon, splash của app
+├── tests/                      # 46 unit/component test (Jest)
+├── .github/workflows/deploy-web.yml   # CI: kiểm tra + build web + deploy GitHub Pages
+└── src/
+    ├── navigation/             # Điều hướng
+    │   ├── RootNavigator.tsx   #   Chưa đăng nhập -> AuthStack, đã đăng nhập -> MainTabs
+    │   ├── MainTabs.tsx        #   3 tab: Browse Rooms / My Bookings / Profile
+    │   ├── BrowseRoomsStack.tsx, MyBookingsStack.tsx, ProfileStack.tsx, AuthStack.tsx
+    │   └── types.ts            #   Kiểu tham số cho từng màn hình
+    ├── screens/                # Các màn hình
+    │   ├── auth/               #   LoginScreen, RegisterScreen
+    │   ├── browse-rooms/       #   RoomListScreen -> RoomDetailScreen -> TimeSlotBookingScreen -> SeatSelectionScreen
+    │   ├── my-bookings/        #   MyBookingsListScreen, BookingDetailScreen (hủy đặt)
+    │   └── profile/            #   ProfileScreen (đăng xuất)
+    ├── components/             # Thành phần UI tái sử dụng
+    │   ├── RoomCard/           #   Thẻ phòng (memo) + skeleton loading
+    │   ├── FilterChip/, TimeSlotPicker/, SeatMap/, RoomInfo/, AuthForm/, Toast/, RoomIllustration/
+    ├── store/                  # Zustand: useFilterStore, useBookingDraftStore, useSessionStore, useToastStore
+    ├── services/
+    │   ├── api/                #   Hook TanStack Query (useRooms, useCreateBooking, ...) + mock/db.ts (CSDL giả trong bộ nhớ)
+    │   ├── firebase.ts, auth.ts#   Đăng ký / đăng nhập / phiên đăng nhập
+    │   └── reminders.ts        #   Đặt lịch thông báo nhắc trước 15 phút
+    ├── utils/                  # overlapCheck (chống trùng), applyFilters, generateDaySlots, reminderTime, ...
+    ├── types/                  # Room, Booking, TimeSlot, FilterState
+    ├── hooks/, constants/      # useDebouncedValue, theme (màu sáng/tối, font, spacing)
+```
+
+Luồng dữ liệu: **Screen -> hook TanStack Query -> `services/api/mock/db.ts`**. Trạng thái tạm (bộ lọc, khung giờ/ghế đang chọn, người dùng) nằm trong **Zustand**.
+
+---
+
+## 4. Danh sách tính năng
+
+| Yêu cầu | Trạng thái | Ghi chú |
 |---|---|---|
-| Browse rooms with search + filter chips (status, type) | Done | `RoomListScreen`, state in `useFilterStore` |
-| Room list as `FlatList` with memoized cards | Done | `RoomCard` is `memo`, skeleton while loading. **60 fps was not measured on a device.** |
-| Two-step booking: time slot, then seats | Done | `TimeSlotBookingScreen` then `SeatSelectionScreen`, shows "N of M seats left" |
-| Conflict prevention | Done | A seat cannot be double-booked for an overlapping slot; one user cannot hold two overlapping bookings; occupied rooms cannot be booked. Checked again in the (mock) API, not only in the UI. |
-| Global state with Zustand | Done | filters, booking draft (slot + seats), session, toast |
-| My Bookings + cancel | Done | Shows room, building, floor, seats, time, status |
-| Local notification reminder (15 min before slot) | Done, Android app only | Not available on web or in Expo Go. See screenshot 9. |
-| Sign up / sign in / persisted login | Done | Firebase Auth (email + password), profile doc in Firestore `users/{uid}` |
-| Dark mode + responsive layout | Done | Follows system theme; web is capped at 480 px |
-| Live demo + installable on mobile | Done | GitHub Pages PWA + APK |
-| Real-time updates across users | **Not done** | Rooms and bookings live in an in-memory mock DB. Only accounts are in Firebase. |
-| Booking persistence across app restarts | **Not done** | Same reason as above |
+| Duyệt phòng, tìm kiếm + chip lọc (trạng thái, loại phòng) | Xong | `RoomListScreen`, state ở `useFilterStore` |
+| Danh sách `FlatList`, thẻ phòng `memo` | Xong | Có skeleton khi tải. **Chưa đo 60 fps trên máy thật.** |
+| Đặt 2 bước: chọn khung giờ rồi chọn ghế | Xong | Màn ghế hiển thị "N of M seats left" |
+| Chống đặt trùng | Xong | Ghế đã có người đặt trong khung giờ giao nhau thì không chọn được; một người không giữ 2 lịch trùng giờ; phòng "occupied" không đặt được. Kiểm tra lại ở tầng API (mock), không chỉ ở UI. |
+| State toàn cục bằng Zustand | Xong | filter, bản nháp đặt chỗ, phiên đăng nhập, toast |
+| My Bookings + hủy đặt | Xong | Hiển thị phòng, tòa, tầng, ghế, giờ, trạng thái |
+| Thông báo nhắc lịch (trước 15 phút) | Xong, chỉ app Android | Không chạy trên web hoặc Expo Go. Xem ảnh 9. |
+| Đăng ký / đăng nhập / giữ đăng nhập | Xong | Firebase Auth (email + mật khẩu), hồ sơ ở Firestore `users/{uid}` |
+| Dark mode + giao diện responsive | Xong | Theo giao diện hệ thống; bản web giới hạn rộng 480 px |
+| Live demo cài được trên điện thoại | Xong | PWA trên GitHub Pages + file APK |
+| Cập nhật real-time giữa nhiều người dùng | **Chưa làm** | Phòng và lượt đặt nằm trong CSDL giả trong bộ nhớ. Chỉ tài khoản nằm trên Firebase. |
+| Lưu lượt đặt sau khi tắt app | **Chưa làm** | Cùng lý do trên |
 
-Automated checks: `tsc --noEmit` clean, 46 Jest tests passing (overlap/seat logic, filters, mock DB, auth validation, reminder time, session watcher, `RoomCard`, `FilterChip`).
-
----
-
-## 4. Screenshots
-
-All screenshots were taken from the release APK running on an Android emulator (Pixel 8, 1080x2400). Red numbers mark the points described under each image.
-
-### 1. Sign in
-![Login](images/s01_login.png)
-Email + password form with validation. Session is restored on the next launch.
-
-### 2. Register
-![Register](images/s02_register.png)
-Account creation (Firebase Auth). The form scrolls and stays above the keyboard.
-
-### 3. Browse rooms with filters
-![Browse](images/s03_filters.png)
-1. Search box. 2. Filter chips (here: *Available* + *Lab*). 3. Room cards in a two-column `FlatList` with seats left and status badge.
-
-### 4. Step 1: pick a time slot
-![Slots](images/s04_slots.png)
-1. Selected slot. 2. Free seats for that slot. 3. "Continue to seats" is enabled only after a slot is picked.
-
-### 5. Step 2: pick seats
-![Seats](images/s05_seats.png)
-1. "N of M seats left" for the chosen slot. 2. Selected seats (blue). 3. Confirm button shows the seat count.
-
-### 6. Notification permission and confirmation toast
-![Confirmed](images/s06_confirmed.png)
-After confirming, a toast appears. On first booking the app asks for notification permission.
-
-### 7. My Bookings
-![My bookings](images/s07_mybookings.png)
-1. Booking card: room, building, floor, seats, time, status.
-
-### 8. Seat conflict prevention
-![Taken](images/s08_taken.png)
-Seats 5, 6, 12 are now taken for the same slot. They are disabled and struck through, and the counter dropped from 30 to 27.
-
-### 9. Reminder notification
-![Notification](images/s10_notification.png)
-"Upcoming: Lab A3-102, Seat 1, 3:00 PM - 4:00 PM". It was scheduled for 14:45 (15 min before the slot). Android delivered it at about 14:49 because it batches inexact alarms (`dumpsys alarm` showed a delivery window of about 4.5 min).
-
-### 10. Dark mode
-![Dark](images/s09_dark.png)
-Same screen with the system dark theme.
+Kiểm tra tự động: `tsc --noEmit` sạch, 46 test Jest đều qua (logic trùng giờ/ghế, bộ lọc, mock DB, validate đăng nhập, giờ nhắc, theo dõi phiên, `RoomCard`, `FilterChip`).
 
 ---
 
-## 5. Challenges and solutions
+## 5. Ảnh chụp màn hình
 
-1. **Form hidden by the keyboard (Android edge-to-edge).** On the Register screen the keyboard covered the fields and the page did not scroll. Found while testing on the emulator. Fixed with a scrollable form inside `KeyboardAvoidingView behavior="padding"`.
-2. **APK shipped with the wrong Firebase config.** Gradle cached the JS bundle and ignored the new `.env.local`, so the APK still used placeholder values. Fixed by forcing a re-bundle (`createBundleReleaseJsAndAssets --rerun`) and verifying by searching for the project id inside the built bundle.
-3. **Smaller issues:** `expo-notifications` throws in Expo Go on Android (now lazy-imported and skipped there); the startup spinner could hang for a deleted account on a slow network (session check now gives up after 4 s); SVG gradients disappeared on stacked screens because of duplicate ids (unique id per instance).
+Tất cả ảnh chụp từ file APK bản release chạy trên máy ảo Android (Pixel 8, 1080x2400). Số đỏ đánh dấu các điểm được giải thích bên dưới ảnh.
 
-**Known limits / future work:** move rooms and bookings to Firestore for real-time sync and persistence; measure list performance on a physical device; the APK is debug-signed.
+### Ảnh 1 – Đăng nhập
+![Đăng nhập](images/s01_login.png)
+
+Form email + mật khẩu, có kiểm tra dữ liệu nhập. Lần mở app sau, phiên đăng nhập được khôi phục tự động.
+
+### Ảnh 2 – Đăng ký
+![Đăng ký](images/s02_register.png)
+
+Tạo tài khoản qua Firebase Auth. Form cuộn được và không bị bàn phím che.
+
+### Ảnh 3 – Duyệt phòng và lọc
+![Duyệt phòng](images/s03_filters.png)
+
+1. Ô tìm kiếm.
+2. Các chip lọc (đang chọn *Available* + *Lab*).
+3. Thẻ phòng trong `FlatList` 2 cột, có số ghế còn lại và nhãn trạng thái.
+
+### Ảnh 4 – Bước 1: chọn khung giờ
+![Chọn giờ](images/s04_slots.png)
+
+1. Khung giờ đang chọn.
+2. Số ghế còn trống của khung giờ đó.
+3. Nút "Continue to seats" chỉ bật sau khi đã chọn giờ.
+
+### Ảnh 5 – Bước 2: chọn ghế
+![Chọn ghế](images/s05_seats.png)
+
+1. Dòng "N of M seats left" cho khung giờ đã chọn.
+2. Các ghế đang chọn (màu xanh).
+3. Nút xác nhận hiển thị số ghế.
+
+### Ảnh 6 – Xin quyền thông báo và toast xác nhận
+![Xác nhận](images/s06_confirmed.png)
+
+Sau khi xác nhận, hiện toast "Booking confirmed". Ở lần đặt đầu tiên, app xin quyền gửi thông báo.
+
+### Ảnh 7 – My Bookings
+![My Bookings](images/s07_mybookings.png)
+
+1. Thẻ lượt đặt: phòng, tòa, tầng, ghế, giờ, trạng thái.
+
+### Ảnh 8 – Chống đặt trùng ghế
+![Ghế đã bị đặt](images/s08_taken.png)
+
+Ghế 5, 6, 12 đã bị đặt trong cùng khung giờ nên bị vô hiệu hóa và gạch ngang. Bộ đếm giảm từ 30 xuống 27.
+
+### Ảnh 9 – Thông báo nhắc lịch
+![Thông báo](images/s10_notification.png)
+
+"Upcoming: Lab A3-102, Seat 1, 3:00 PM - 4:00 PM". Lịch nhắc đặt lúc 14:45 (trước giờ đặt 15 phút). Android gửi lúc khoảng 14:49 vì hệ thống gộp các alarm không chính xác (`dumpsys alarm` cho thấy cửa sổ trễ ~4,5 phút).
+
+### Ảnh 10 – Dark mode
+![Dark mode](images/s09_dark.png)
+
+Cùng màn hình khi hệ thống bật giao diện tối.
+
+---
+
+## 6. Khó khăn và cách giải quyết
+
+1. **Bàn phím che form (Android edge-to-edge).** Ở màn Đăng ký, bàn phím che các ô nhập và trang không cuộn được. Phát hiện khi test trên máy ảo. Đã sửa bằng form cuộn được đặt trong `KeyboardAvoidingView behavior="padding"`.
+2. **APK build ra dùng sai cấu hình Firebase.** Gradle cache bản JS bundle và bỏ qua `.env.local` mới, nên APK vẫn dùng giá trị cũ. Đã ép build lại bundle (`createBundleReleaseJsAndAssets --rerun`) và kiểm tra bằng cách tìm project id trong bundle sau khi build.
+3. **Lỗi nhỏ khác:** `expo-notifications` báo lỗi trong Expo Go trên Android (nay import lười và bỏ qua ở Expo Go); vòng quay khởi động có thể treo với tài khoản đã xóa khi mạng chậm (nay kiểm tra phiên tối đa 4 giây); gradient SVG biến mất khi các màn hình xếp chồng do trùng id (nay mỗi instance có id riêng).
+
+**Hạn chế và hướng phát triển:** chuyển phòng và lượt đặt sang Firestore để có real-time và lưu trữ lâu dài; đo hiệu năng danh sách trên máy thật; APK hiện ký debug.
